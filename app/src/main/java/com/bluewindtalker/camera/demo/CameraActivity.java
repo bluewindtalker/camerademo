@@ -8,6 +8,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorEventListener2;
+import android.hardware.SensorManager;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -61,6 +66,11 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
     private boolean isRequestPermission = false;
 
     /**
+     * 获得传感器管理者
+     */
+    private SensorManager sensorManager;
+
+    /**
      * 当前打开摄像头类型，当前写的是后置摄像头
      */
     private int currentCameraType = Camera.CameraInfo.CAMERA_FACING_BACK;
@@ -81,12 +91,31 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
 
         takePicBtn.setOnClickListener(this);
         picFl.setOnClickListener(this);
+
+        sensorManager = LightSensorUtil.getSenosrManager(this);
     }
+
+    private SensorEventListener lightSensorListener = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
+                //光线强度
+                float lux = event.values[0];
+                Log.e(TAG, "光线传感器得到的光线强度-->" + lux);
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        }
+    };
 
     @Override
     protected void onResume() {
         super.onResume();
         Log.e(TAG, "onResume");
+        LightSensorUtil.registerLightSensor(sensorManager,lightSensorListener);
+
         if (!isRequestPermission) {
             checkAndInitCamera();
         }
@@ -95,6 +124,8 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
     @Override
     protected void onPause() {
         super.onPause();
+        LightSensorUtil.unregisterLightSensor(sensorManager,lightSensorListener);
+
         Log.e(TAG, "onPause");
         releaseCamera();
 
@@ -263,7 +294,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         if (picSizes != null && picSizes.size() > 0) {
             for (Camera.Size size : picSizes) {
                 int newDiff = Math.abs(size.width - width) + Math.abs(size.height - height);
-                if(newDiff == 0){
+                if (newDiff == 0) {
                     return size;
                 }
                 if (newDiff < diff) {
