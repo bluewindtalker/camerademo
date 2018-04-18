@@ -437,7 +437,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
                 long pixelLightCount = 0L;
                 //像素点的总数
                 long pixeCount = width * height;
-                //采集步长，因为没有必要每个像素点都采集，可以跨一段采集一个，减少计算负担，必须大于1。
+                //采集步长，因为没有必要每个像素点都采集，可以跨一段采集一个，减少计算负担，必须大于等于1。
                 int step = 10;
                 //data.length - allCount * 1.5f的目的是判断图像格式是不是YUV420格式，只有是这种格式才相等
                 //因为int整形与float浮点直接比较会出问题，所以这么比
