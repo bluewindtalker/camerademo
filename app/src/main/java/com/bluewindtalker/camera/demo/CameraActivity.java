@@ -271,26 +271,31 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
 
         SurfaceHolder holder = displaySfv.getHolder();
         if (holder != null) {
-            holder.addCallback(new SurfaceHolder.Callback() {
+            if(mCallBack != null){
+                holder.removeCallback(mCallBack);
+            }
+            mCallBack = new SurfaceHolder.Callback() {
                 @Override
                 public void surfaceCreated(SurfaceHolder holder) {
-                    Log.e(TAG, "surfaceCreated" + holder);
+                    Log.e(TAG, "surfaceCreated" + holder + this);
                     checkAndInitCamera();
 
                 }
 
                 @Override
                 public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                    Log.e(TAG, "surfaceChanged" + holder);
+                    Log.e(TAG, "surfaceChanged" + holder + this);
                 }
 
                 @Override
                 public void surfaceDestroyed(SurfaceHolder holder) {
-                    Log.e(TAG, "surfaceDestroyed" + holder);
+                    Log.e(TAG, "surfaceDestroyed" + holder + this);
                 }
-            });
+            };
+            holder.addCallback(mCallBack);
         }
     }
+    private SurfaceHolder.Callback mCallBack;
 
     /**
      * 获得最合是的宽高size
