@@ -203,7 +203,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
     private void initCamera() {
         if (camera != null) {
             camera.startPreview();
-            setPreviewCallBack();
+            setPreviewLight();
         }
         Log.e(TAG, "initCamera");
         //1. Obtain an instance of Camera from open(int).
@@ -254,7 +254,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         //在调用拍照之前必须调用startPreview()方法,但是在此时有可能surface还未创建成功。
         // 所以加上SurfaceHolder.Callback()，在回调再次初始化下。
         camera.startPreview();
-        setPreviewCallBack();
+        setPreviewLight();
         //7. When you want, call
         // takePicture(Camera.ShutterCallback, Camera.PictureCallback, Camera.PictureCallback, Camera.PictureCallback)
         // to capture a photo. Wait for the callbacks to provide the actual image data.
@@ -400,7 +400,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
 
 
     //上次记录的时间戳
-    long lastTime = System.currentTimeMillis();
+    long lastRecordTime = System.currentTimeMillis();
 
     //上次记录的索引
     int darkIndex = 0;
@@ -411,7 +411,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
 
     //亮度低的阀值
     int darkValue = 60;
-    private void setPreviewCallBack() {
+    private void setPreviewLight() {
         //不需要的时候直接清空
 //        if(noNeed){
 //            camera.setPreviewCallback(null);
@@ -420,44 +420,45 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         camera.setPreviewCallback(new Camera.PreviewCallback() {
             @Override
             public void onPreviewFrame(byte[] data, Camera camera) {
-                if (System.currentTimeMillis() - lastTime < waitScanTime) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastRecordTime < waitScanTime) {
                     return;
                 }
-                lastTime = System.currentTimeMillis();
+                lastRecordTime = currentTime;
 
                 int width = camera.getParameters().getPreviewSize().width;
                 int height = camera.getParameters().getPreviewSize().height;
                 //像素点的总亮度
                 long pixelLightCount = 0L;
                 //像素点的总数
-                long allCount = width * height;
+                long pixeCount = width * height;
                 //采集步长，因为没有必要每个像素点都采集，可以跨一段采集一个，减少计算负担，必须大于1。
                 int step = 10;
                 //data.length - allCount * 1.5f的目的是判断图像格式是不是YUV420格式，只有是这种格式才相等
                 //因为int整形与float浮点直接比较会出问题，所以这么比
-                if (Math.abs(data.length - allCount * 1.5f) < 0.0001f) {
-                    for (int i = 0; i < allCount; i += step) {
+                if (Math.abs(data.length - pixeCount * 1.5f) < 0.00001f) {
+                    for (int i = 0; i < pixeCount; i += step) {
                         //如果直接加是不行的，因为data[i]记录的是色值并不是数值，byte的范围是+127到—128，
                         // 而亮度FFFFFF是11111111是-127，所以这里需要先转为无符号unsigned long参考Byte.toUnsignedLong()
                         pixelLightCount += ((long) data[i]) & 0xffL;
                     }
                     //平均亮度
-                    long cameraLight = pixelLightCount / (allCount / step);
-                    Log.e(TAG, "摄像头环境亮度为 ： " + cameraLight);
+                    long cameraLight = pixelLightCount / (pixeCount / step);
                     //更新历史记录
                     int lightSize = darkList.length;
                     darkList[darkIndex = darkIndex % lightSize] = cameraLight;
                     darkIndex++;
-                    boolean isDark = true;
+                    boolean isDarkEnv = true;
                     //判断在时间范围waitScanTime * lightSize内是不是亮度过暗
                     for (int i = 0; i < lightSize; i++) {
                         if (darkList[i] > darkValue) {
-                            isDark = false;
+                            isDarkEnv = false;
                         }
                     }
+                    Log.e(TAG, "摄像头环境亮度为 ： " + cameraLight);
                     if (!isFinishing()) {
                         //亮度过暗就提醒
-                        if (isDark) {
+                        if (isDarkEnv) {
                             lightTV.setVisibility(View.VISIBLE);
                         } else {
                             lightTV.setVisibility(View.GONE);
